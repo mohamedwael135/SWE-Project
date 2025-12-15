@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Obour Airline - Home</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    nav {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    #authNav {
+      margin-left: 30px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-content">
+    <h1>Obour Airline</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="booking.html">Book a Flight</a>
+      <a href="manage.html">My Trips</a>
+      <span id="authNav"></span>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="hero">
+    <h2>Find Your Next Adventure</h2>
+    <p>Book flights to destinations worldwide</p>
+  </section>
+
+  <section class="card">
+    <h3>Search Flights</h3>
+    <form id="searchForm">
+      <div class="form-row">
+        <div class="form-group">
+          <label>From</label>
+          <input type="text" name="from" placeholder="Cairo, Dubai, London..." required>
+        </div>
+        <div class="form-group">
+          <label>To</label>
+          <input type="text" name="to" placeholder="Any destination" required>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Departure Date</label>
+          <input type="date" name="date" min="2025-12-15" required>
+        </div>
+        <div class="form-group">
+          <label>Passengers</label>
+          <select name="passengers">
+            <option value="1">1 Adult</option>
+            <option value="2">2 Adults</option>
+            <option value="3">3 Adults</option>
+            <option value="4">4 Adults</option>
+          </select>
+        </div>
+      </div>
+      
+      <button type="submit" class="btn btn-primary">Search Flights</button>
+    </form>
+    
+    <div id="searchResults"></div>
+  </section>
+</main>
+
+<script src="auth_check.js"></script>
+<script>
+// Require login
+requireLogin();
+updateNavigation();
+
+document.getElementById('searchForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const resultsDiv = document.getElementById('searchResults');
+    resultsDiv.innerHTML = '<p>Searching flights...</p>';
+    
+    fetch('search_flights.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        displayFlights(data);
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        resultsDiv.innerHTML = '<p style="color: red;">Error searching flights. Make sure XAMPP is running!</p>';
+    });
+});
+
+function displayFlights(flights) {
+    const resultsDiv = document.getElementById('searchResults');
+    
+    if(flights.length === 0) {
+        resultsDiv.innerHTML = '<div class="card"><p>No flights found for this route and date. Try different cities or dates!</p></div>';
+        return;
+    }
+    
+    let html = '<h3>Available Flights (' + flights.length + ' results)</h3>';
+    
+    flights.forEach(flight => {
+        html += '<div class="card" style="margin-bottom: 15px; border-left: 4px solid #FF6B35;">';
+        html += '<h4>' + flight.airline_name + ' - Flight ' + flight.flight_number + '</h4>';
+        html += '<div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 10px 0;">';
+        html += '<div><strong>From:</strong> ' + flight.departure_city + '<br><strong>Departure:</strong> ' + flight.departure_time + '</div>';
+        html += '<div><strong>To:</strong> ' + flight.arrival_city + '<br><strong>Arrival:</strong> ' + flight.arrival_time + '</div>';
+        html += '</div>';
+        html += '<p><strong>Date:</strong> ' + flight.departure_date + '</p>';
+        html += '<p><strong>Price:</strong> $' + parseFloat(flight.price).toFixed(2) + ' per person</p>';
+        html += '<p><strong>Available Seats:</strong> ' + flight.available_seats + '</p>';
+        html += '<a href="booking.html?flight_id=' + flight.flight_id + '" class="btn btn-primary">Book This Flight</a>';
+        html += '</div>';
+    });
+    
+    resultsDiv.innerHTML = html;
+}
+</script>
+
+</body>
+</html>

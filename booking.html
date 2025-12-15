@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Book Flight - Obour Airline</title>
+  <link rel="stylesheet" href="styles.css">
+  <style>
+    .header-content {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    nav {
+      display: flex;
+      gap: 20px;
+      align-items: center;
+    }
+    #authNav {
+      margin-left: 30px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+    .ticket {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      border-radius: 15px;
+      margin: 20px 0;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+    }
+    .ticket-header {
+      font-size: 24px;
+      font-weight: bold;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    .ticket-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+      margin: 20px 0;
+    }
+    .ticket-section {
+      background: rgba(255,255,255,0.1);
+      padding: 15px;
+      border-radius: 8px;
+    }
+    .ticket-barcode {
+      text-align: center;
+      margin-top: 20px;
+      padding: 15px;
+      background: white;
+      color: black;
+      border-radius: 8px;
+      font-family: monospace;
+      font-size: 20px;
+      letter-spacing: 5px;
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="header-content">
+    <h1>Obour Airline</h1>
+    <nav>
+      <a href="index.html">Home</a>
+      <a href="booking.html">Book a Flight</a>
+      <a href="manage.html">My Trips</a>
+      <span id="authNav"></span>
+    </nav>
+  </div>
+</header>
+
+<main>
+  <section class="card">
+    <h2>Complete Your Booking</h2>
+    <div id="flightInfo" style="background: #f0f0f0; padding: 15px; border-radius: 8px; margin-bottom: 20px;">
+      <p>Loading flight details...</p>
+    </div>
+    
+    <form id="bookingForm">
+      <input type="hidden" name="flight_id" id="flight_id">
+      
+      <h3>Passenger Information</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>First Name</label>
+          <input type="text" name="first_name" id="first_name" required>
+        </div>
+        <div class="form-group">
+          <label>Last Name</label>
+          <input type="text" name="last_name" id="last_name" required>
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" id="email" required>
+        </div>
+        <div class="form-group">
+          <label>Phone</label>
+          <input type="tel" name="phone" id="phone" placeholder="+20 123 456 7890">
+        </div>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Date of Birth</label>
+          <input type="date" name="dob">
+        </div>
+        <div class="form-group">
+          <label>Passport Number</label>
+          <input type="text" name="passport" placeholder="A12345678">
+        </div>
+      </div>
+      
+      <div class="form-group">
+        <label>Nationality</label>
+        <input type="text" name="nationality" placeholder="Egyptian">
+      </div>
+      
+      <h3>Payment Information</h3>
+      <div class="form-group">
+        <label>Card Number</label>
+        <input type="text" name="card_number" placeholder="1234 5678 9012 3456" required>
+      </div>
+      
+      <div class="form-row">
+        <div class="form-group">
+          <label>Expiry Date</label>
+          <input type="text" name="expiry" placeholder="MM/YY">
+        </div>
+        <div class="form-group">
+          <label>CVV</label>
+          <input type="text" name="cvv" placeholder="123" maxlength="3">
+        </div>
+      </div>
+      
+      <div id="errorMessage" style="color: red; margin: 10px 0;"></div>
+      
+      <button type="submit" class="btn btn-primary">Confirm Booking</button>
+    </form>
+    
+    <div id="ticketDisplay"></div>
+  </section>
+</main>
+
+<script src="auth_check.js"></script>
+<script>
+requireLogin();
+updateNavigation();
+
+let loggedInUser = null;
+let selectedFlight = null;
+
+fetch('check_session.php')
+.then(response => response.json())
+.then(data => {
+    if(data.logged_in) {
+        loggedInUser = data.user;
+        document.getElementById('first_name').value = data.user.first_name;
+        document.getElementById('last_name').value = data.user.last_name;
+        document.getElementById('email').value = data.user.email;
+    }
+})
+.catch(error => console.error('Error checking session:', error));
+
+const urlParams = new URLSearchParams(window.location.search);
+const flightId = urlParams.get('flight_id');
+
+if(flightId) {
+    document.getElementById('flight_id').value = flightId;
+    loadFlightDetails(flightId);
+} else {
+    document.getElementById('flightInfo').innerHTML = '<p style="color: red;">No flight selected. Please <a href="index.html">search for flights</a> first.</p>';
+}
+
+function loadFlightDetails(flightId) {
+    fetch('search_flights.php', {
+        method: 'POST',
+        body: new URLSearchParams({from: '', to: '', date: ''})
+    })
+    .then(response => response.json())
+    .then(flights => {
+        const flight = flights.find(f => f.flight_id == flightId);
+        if(flight) {
+            selectedFlight = flight;
+            let html = '<h4>Selected Flight</h4>';
+            html += '<p><strong>' + flight.airline_name + ' - Flight ' + flight.flight_number + '</strong></p>';
+            html += '<p>' + flight.departure_city + ' to ' + flight.arrival_city + '</p>';
+            html += '<p>Date: ' + flight.departure_date + ' | Departure: ' + flight.departure_time + '</p>';
+            html += '<p style="font-size: 1.2em; color: #FF6B35;"><strong>Total: $' + parseFloat(flight.price).toFixed(2) + '</strong></p>';
+            document.getElementById('flightInfo').innerHTML = html;
+        }
+    })
+    .catch(error => console.error('Error loading flight:', error));
+}
+
+document.getElementById('bookingForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    const formData = new FormData(this);
+    const errorDiv = document.getElementById('errorMessage');
+    const submitBtn = this.querySelector('button[type="submit"]');
+    
+    errorDiv.textContent = '';
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Processing...';
+    
+    fetch('create_booking.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if(data.success) {
+            displayTicket(data.booking_ref, formData);
+            this.style.display = 'none';
+        } else {
+            errorDiv.textContent = 'Error: ' + data.message;
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Confirm Booking';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        errorDiv.textContent = 'Error creating booking. Make sure XAMPP is running!';
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Confirm Booking';
+    });
+});
+
+function displayTicket(bookingRef, formData) {
+    const ticketDiv = document.getElementById('ticketDisplay');
+    
+    let html = '<div class="ticket">';
+    html += '<div class="ticket-header">BOARDING PASS</div>';
+    html += '<div class="ticket-details">';
+    html += '<div class="ticket-section">';
+    html += '<strong>Passenger</strong><br>';
+    html += formData.get('first_name') + ' ' + formData.get('last_name');
+    html += '</div>';
+    html += '<div class="ticket-section">';
+    html += '<strong>Booking Reference</strong><br>';
+    html += bookingRef;
+    html += '</div>';
+    html += '<div class="ticket-section">';
+    html += '<strong>From</strong><br>';
+    html += selectedFlight.departure_city + '<br>';
+    html += '<small>' + selectedFlight.departure_date + ' ' + selectedFlight.departure_time + '</small>';
+    html += '</div>';
+    html += '<div class="ticket-section">';
+    html += '<strong>To</strong><br>';
+    html += selectedFlight.arrival_city + '<br>';
+    html += '<small>Arrival: ' + selectedFlight.arrival_time + '</small>';
+    html += '</div>';
+    html += '<div class="ticket-section">';
+    html += '<strong>Flight</strong><br>';
+    html += selectedFlight.flight_number;
+    html += '</div>';
+    html += '<div class="ticket-section">';
+    html += '<strong>Price</strong><br>';
+    html += '$' + parseFloat(selectedFlight.price).toFixed(2);
+    html += '</div>';
+    html += '</div>';
+    html += '<div class="ticket-barcode">' + bookingRef + '</div>';
+    html += '<p style="text-align: center; margin-top: 15px;">Thank you for choosing Obour Airline!</p>';
+    html += '<p style="text-align: center;"><a href="manage.html" style="color: white; text-decoration: underline;">Manage Your Booking</a></p>';
+    html += '</div>';
+    
+    ticketDiv.innerHTML = html;
+}
+</script>
+
+</body>
+</html>
